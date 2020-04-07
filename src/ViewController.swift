@@ -15,7 +15,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
     //--------------------------------
     let motionManager = CMMotionManager()
     var timer: Timer!
-    var graphLine: [CGPoint] = []
+    var graphLine: [CGPoint]! = []
     let numPoints = 100
     //--------------------------------
     override func viewDidLoad()
@@ -27,7 +27,6 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
         motionManager.startMagnetometerUpdates()
         motionManager.startDeviceMotionUpdates()
         setGraph()
-//        drawGraph(0.0)
         timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
         startPeripheral(peripheralName: "")
     }
@@ -35,9 +34,6 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
     @objc func update() {
         if let accelerometerData = motionManager.accelerometerData
         {
-//            accLabelX.text = String(format: "%.2f", accelerometerData.acceleration.x)
-//            accLabelY.text = String(format: "%.2f", accelerometerData.acceleration.y)
-//            accLabelZ.text = String(format: "%.2f", accelerometerData.acceleration.z)
             clearGraph();
             
             drawGraph(accelerometerData.acceleration.x)
@@ -74,7 +70,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
         {
             graphLine[i].y = graphLine[i+1].y
         }
-        graphLine[numPoints - 1].y = superlayer.frame.midY + CGFloat(newDataPoint) * superlayer.frame.midY
+        graphLine[numPoints - 1].y = superlayer.frame.midY + CGFloat(newDataPoint) * superlayer.frame.midY / 7.0
         let path = CGMutablePath()
         path.addLines(between: graphLine)
         let sublayer = CAShapeLayer()
