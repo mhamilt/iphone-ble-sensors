@@ -13,21 +13,21 @@ import CoreBluetooth
 class ViewController: UIViewController, CBPeripheralManagerDelegate
 {
     //--------------------------------
-    @IBOutlet var accLabelX: UILabel!
-    @IBOutlet var accLabelY: UILabel!
-    @IBOutlet var accLabelZ: UILabel!
-    //--------------------------------
     let motionManager = CMMotionManager()
     var timer: Timer!
+    var graphLine: [CGPoint] = []
+    let numPoints = 100
     //--------------------------------
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        
         motionManager.startAccelerometerUpdates()
         motionManager.startGyroUpdates()
         motionManager.startMagnetometerUpdates()
         motionManager.startDeviceMotionUpdates()
-        
+        setGraph()
+//        drawGraph(0.0)
         timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
         startPeripheral(peripheralName: "")
     }
@@ -35,26 +35,60 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
     @objc func update() {
         if let accelerometerData = motionManager.accelerometerData
         {
-            accLabelX.text = String(format: "%.2f", accelerometerData.acceleration.x)
-            accLabelY.text = String(format: "%.2f", accelerometerData.acceleration.y)
-            accLabelZ.text = String(format: "%.2f", accelerometerData.acceleration.z)
+//            accLabelX.text = String(format: "%.2f", accelerometerData.acceleration.x)
+//            accLabelY.text = String(format: "%.2f", accelerometerData.acceleration.y)
+//            accLabelZ.text = String(format: "%.2f", accelerometerData.acceleration.z)
+            clearGraph();
             
+            drawGraph(accelerometerData.acceleration.x)
             if((currentCentral) != nil)
             {
                 updateCharacteristic(value: Float32(accelerometerData.acceleration.x))
             }
         }
-        if let gyroData = motionManager.gyroData {
+        if motionManager.gyroData != nil {
             //			print(gyroData)
         }
-        if let magnetometerData = motionManager.magnetometerData {
+        if motionManager.magnetometerData != nil {
             //			print(magnetometerData)
         }
-        if let deviceMotion = motionManager.deviceMotion {
+        if motionManager.deviceMotion != nil {
             //			print(deviceMotion)
         }
     }
     
+    func setGraph()
+    {
+        let superlayer = view.layer
+        for i in 0..<numPoints
+        {
+            let xpos = superlayer.bounds.maxX * CGFloat(i) / CGFloat(numPoints)
+            let ypos = superlayer.bounds.midY
+            graphLine.append(CGPoint(x: xpos, y: ypos))
+        }
+    }
+    func drawGraph(_ newDataPoint: Double)
+    {
+        let superlayer = view.layer
+        for i in 0..<(numPoints - 1)
+        {
+            graphLine[i].y = graphLine[i+1].y
+        }
+        graphLine[numPoints - 1].y = superlayer.frame.midY + CGFloat(newDataPoint) * superlayer.frame.midY
+        let path = CGMutablePath()
+        path.addLines(between: graphLine)
+        let sublayer = CAShapeLayer()
+        sublayer.strokeColor = UIColor.green.cgColor
+        sublayer.fillColor = UIColor.clear.cgColor
+        sublayer.lineWidth = 2.0
+        sublayer.path = path
+        superlayer.addSublayer(sublayer)
+    }
+    
+    func clearGraph()
+    {
+        self.view.layer.sublayers?.forEach {$0.removeFromSuperlayer()}
+    }
     //--------------------------------------------------------------------------
     // MARK: Bluetooth Peripheral Vars
     let serviceId = "29D7544B-6870-45A4-BB7E-D981535F4525"
