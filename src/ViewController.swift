@@ -1,11 +1,3 @@
-//
-//  ViewController.swift
-//  CoreMotionExample
-//
-//  Created by Maxim Bilan on 1/21/16.
-//  Copyright © 2016 Maxim Bilan. All rights reserved.
-//
-
 import UIKit
 import CoreMotion
 import CoreBluetooth
@@ -83,7 +75,7 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
     
     func clearGraph()
     {
-        self.view.layer.sublayers?.forEach {$0.removeFromSuperlayer()}
+        self.view.layer.sublayers?.forEach {$0.removeFromSuperlayer()} // this is a terrible idea
     }
     //--------------------------------------------------------------------------
     // MARK: Bluetooth Peripheral Vars
