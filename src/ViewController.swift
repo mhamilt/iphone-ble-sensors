@@ -6,43 +6,109 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
 {
     //--------------------------------
     let motionManager = CMMotionManager()
+    let motionQueue = OperationQueue()
+    var accHandle: CMAccelerometerHandler!
     var timer: Timer!
     var graphLine: [CGPoint]! = []
     let numPoints = 100
+    var currentX = 0.0
+    var recordX = 0.0
+    var previousX = 0.0;
+    var previousY = 0.0;
+    var accThreshold = 4.0
+    
+    var weAreGoingFast: Bool = false;
+    var weAreGoingFastXm: Bool = false;
+    var weAreGoingFastY: Bool = false;
+    var weAreGoingFastYm: Bool = false;
+    var weAreSlowingDown: Bool = false;
+    var weAreSlowingDownY: Bool = false;
+    var counter = 0;
     //--------------------------------
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        setGraph()
         
-        motionManager.startAccelerometerUpdates()
+        motionManager.startAccelerometerUpdates(to: motionQueue,
+                                                withHandler: self.accHandler )
         motionManager.startGyroUpdates()
         motionManager.startMagnetometerUpdates()
         motionManager.startDeviceMotionUpdates()
-        setGraph()
-        timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
-        startPeripheral(peripheralName: "")
+//        timer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
+        startPeripheral(peripheralName: "DrumStick")
     }
     
-    @objc func update() {
-        if let accelerometerData = motionManager.accelerometerData
+    @objc func update()
+    {
+//        clearGraph();
+//        drawGraph(self.currentX)
+//        if((currentCentral) != nil)
+//        {
+//            updateCharacteristic(value: Float32(accelerometerData.acceleration.x))
+//        }
+    }
+    
+    func accHandler(data: CMAccelerometerData?, error: Error?) -> Void
+    {
+        self.currentX = data!.acceleration.x;
+        
+        if data!.acceleration.x > self.accThreshold && !weAreSlowingDown
         {
-            clearGraph();
-            
-            drawGraph(accelerometerData.acceleration.x)
-            if((currentCentral) != nil)
+            weAreGoingFast = true;
+        }
+        else if (data!.acceleration.x < self.accThreshold && weAreSlowingDown)
+        {
+            weAreSlowingDown = false
+        }
+        
+        if weAreGoingFast
+        {
+            if (data!.acceleration.x - previousX) >= 0.0
             {
-                updateCharacteristic(value: Float32(accelerometerData.acceleration.x))
+                weAreSlowingDown = true;
+            }
+            if weAreSlowingDown
+            {
+                if((currentCentral) != nil)
+                {
+                     updateCharacteristic(IntVal: 1)
+                }
+                counter+=1
+                print(counter)
+                weAreGoingFast =  false
             }
         }
-        if motionManager.gyroData != nil {
-            //			print(gyroData)
+        
+        if data!.acceleration.z > self.accThreshold && !weAreSlowingDownY
+        {
+            weAreGoingFastY = true;
         }
-        if motionManager.magnetometerData != nil {
-            //			print(magnetometerData)
+        else if (data!.acceleration.z < self.accThreshold && weAreSlowingDownY)
+        {
+            weAreSlowingDownY = false
         }
-        if motionManager.deviceMotion != nil {
-            //			print(deviceMotion)
+        
+        if weAreGoingFastY
+        {
+            if (data!.acceleration.z - previousY) >= 0.0
+            {
+                weAreSlowingDownY = true;
+            }
+            if weAreSlowingDownY
+            {
+                if((currentCentral) != nil)
+                {
+                    updateCharacteristic(IntVal: 2)
+                }
+                counter+=1
+                print(counter)
+                weAreGoingFastY =  false
+            }
         }
+        
+        previousX = data!.acceleration.x;
+        previousY = data!.acceleration.y;
     }
     
     func setGraph()
@@ -157,9 +223,12 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
         else
         {
             localService = service
-            let advertisement: [String : Any] = [CBAdvertisementDataLocalNameKey: UIDevice.current.name + "test",
-                                                 CBAdvertisementDataServiceUUIDsKey : [service.uuid]]
-            
+//            let advertisement: [String : Any] = [CBAdvertisementDataLocalNameKey: UIDevice.current.name + "test",
+//                                                 CBAdvertisementDataServiceUUIDsKey : [service.uuid]]
+            let advertisement: [String : Any] = [CBAdvertisementDataLocalNameKey:             peripheralDiscoverableName,
+            CBAdvertisementDataServiceUUIDsKey : [service.uuid]]
+
+
             self.localPeripheralManager.startAdvertising(advertisement)
         }
     }
@@ -219,6 +288,13 @@ class ViewController: UIViewController, CBPeripheralManagerDelegate
     func updateCharacteristic(value: Float32)
     {
         self.localPeripheralManager.updateValue(withUnsafeBytes(of: value, {Data($0)}),
+                                                for: accCharacteristic,
+                                                onSubscribedCentrals: [currentCentral])
+    }
+    
+    func updateCharacteristic(IntVal: Int32)
+    {
+        self.localPeripheralManager.updateValue(withUnsafeBytes(of: IntVal, {Data($0)}),
                                                 for: accCharacteristic,
                                                 onSubscribedCentrals: [currentCentral])
     }
